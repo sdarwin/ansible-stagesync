@@ -7,7 +7,7 @@
   tasks:
     - name: Create dest folder
       ansible.builtin.include_role:
-        name: cppalliance.stagesync
+        name: sdarwin.stagesync
         tasks_from: destdb_step1.yml
 
 - name: Stagesync playbook sourcedb_step1
@@ -17,7 +17,7 @@
   tasks:
     - name: Backup DB
       ansible.builtin.include_role:
-        name: cppalliance.stagesync
+        name: sdarwin.stagesync
         tasks_from: sourcedb_step1.yml
 
 - name: Stagesync playbook destdb_step2
@@ -29,11 +29,11 @@
   tasks:
     - name: Restore DB
       ansible.builtin.include_role:
-        name: cppalliance.stagesync
+        name: sdarwin.stagesync
         tasks_from: destdb_step2.yml
     - name: Update DB
       ansible.builtin.include_role:
-        name: cppalliance.stagesync
+        name: sdarwin.stagesync
         tasks_from: custom/post_restore_update_db.yml
       when: stagesync_post_restore_update_db
 
@@ -44,5 +44,5 @@
   tasks:
     - name: Sync S3 files
       ansible.builtin.include_role:
-        name: cppalliance.stagesync
+        name: sdarwin.stagesync
         tasks_from: sync_files.yml

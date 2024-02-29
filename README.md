@@ -62,7 +62,7 @@ stagesync_social_secret: "456"
 Then run the playbook with --extra-vars:  
 
 ```
-ansible-playbook --extra-vars "@vars/prod-to-stage.yml" roles/cppalliance.stagesync/playbooks/stagesync-playbook.yml
+ansible-playbook --extra-vars "@vars/prod-to-stage.yml" roles/sdarwin.stagesync/playbooks/stagesync-playbook.yml
 ```
 
 Notice the variable `stagesync_copies:` above. That is important to configure properly. It's a list of source and destination S3 buckets. Multiple sets of buckets. For each item, set the "source_bucket" and "dest_bucket" that should be copied, and so on.  
@@ -105,7 +105,7 @@ Example Playbook
 See the playbook in playbooks/stagesync-playbook.yml. Example usage:  
 
 ```
-ansible-playbook --extra-vars "@vars/prod-to-stage.yml" roles/cppalliance.stagesync/playbooks/stagesync-playbook.yml
+ansible-playbook --extra-vars "@vars/prod-to-stage.yml" roles/sdarwin.stagesync/playbooks/stagesync-playbook.yml
 ```
 
 License

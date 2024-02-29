@@ -1,10 +1,9 @@
 ---
 galaxy_info:
-  namespace: cppalliance
+  namespace: sdarwin
   role_name: stagesync
   author: sdarwin
   description: Sync production website to stage website
-  company: cppalliance
 
   # If the issue tracker for your role is not on github, uncomment the
   # next line and provide a value
