@@ -1,0 +1,26 @@
+---
+- name: Checkout website repo  # noqa latest[git]
+  ansible.builtin.git:
+    repo: "{{ stagesync_hosted_repo }}"
+    dest: "{{ stagesync_local_repo }}"
+  delegate_to: localhost
+  run_once: true
+  when: stagesync_compare_git_commits
+
+- name: Compare git commits
+  ansible.builtin.shell: |
+    source_commit=$(git show {{ stagesync_source_gitbranch }} --pretty=format:"%h" --no-patch)
+    destination_commit=$(git show {{ stagesync_destination_gitbranch }} --pretty=format:"%h" --no-patch)
+    if [ "${source_commit}" = "${destination_commit}" ]; then
+        echo "The commits are equivalent. Continuing."
+    else
+        echo "Before syncing, the upstream git branches should have already been synced and deployed. However they have differing commits? Please check this. Exiting."
+        exit 1
+    fi
+  args:
+    executable: /bin/bash
+    chdir: "{{ stagesync_local_repo }}"
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  when: stagesync_compare_git_commits

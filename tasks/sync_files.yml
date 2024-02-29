@@ -1,0 +1,44 @@
+---
+- name: Install rclone
+  ansible.builtin.package:
+    name:
+      - rclone
+    state: present
+
+- name: Determine location of rclone config file
+  ansible.builtin.set_fact:
+    stagesync_rclone_config: "{{ ansible_env.HOME }}/.config/rclone/rclone-ansible.conf"
+
+- name: Generate rclone config file
+  ansible.builtin.template:
+    src: rclone-ansible.conf.j2
+    dest: "{{ stagesync_rclone_config }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Sync files
+  become: true
+  ansible.builtin.shell: |
+      set -xe
+      source="remote1:{{ item.source_bucket }}/{{ item.source_path }}"
+      dest="remote1:{{ item.dest_bucket }}/{{ item.dest_path }}"
+      echo "Source ${source}"
+      echo "Dest ${dest}"
+      export AWS_PROFILE={{ item.aws_profile }}; rclone --config={{ stagesync_rclone_config }} --log-file /tmp/output-ansible-{{ my_idx }}.txt -v -v sync --transfers 16 --checksum ${source} ${dest}
+  args:
+    executable: /bin/bash
+  register: command_output
+  changed_when: false
+  loop: "{{ stagesync_copies }}"
+  loop_control:
+    index_var: my_idx
+
+- name: Output of sync files
+  ansible.builtin.debug:
+    msg:
+      - "{{ item.stdout_lines }}"
+      - "{{ item.stderr_lines }}"
+  loop: "{{ command_output.results }}"
+  loop_control:
+    label: "an item"

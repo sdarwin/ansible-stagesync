@@ -1,0 +1,15 @@
+---
+- name: Run preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: Install prereqs
+  ansible.builtin.import_tasks: prereqs.yml
+
+- name: Creates tmp directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ stagesync_dest_tmp_dir }}"
+    owner: "root"
+    group: "root"
+    mode: "0777"
+    state: directory

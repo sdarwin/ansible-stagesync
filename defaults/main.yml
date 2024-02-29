@@ -1,0 +1,43 @@
+---
+stagesync_hosted_repo: https://github.com/example/example
+stagesync_local_repo: /opt/.github/example/example
+stagesync_source_gitbranch: "origin/master"
+stagesync_destination_gitbranch: "origin/develop"
+stagesync_compare_git_commits: true
+stagesync_backup_script: "/var/lib/postgresql/scripts/postgresbackup.sh"
+stagesync_source_backups_dir: "/opt/backups/postgres"
+stagesync_source_tmp_dir: "/tmp/stagesync"
+stagesync_dest_tmp_dir: "/tmp/stagesync"
+stagesync_backup_user: postgres
+stagesync_backup_group: postgres
+stagesync_execute_backup: true
+stagesync_aws_region: us-east-2
+
+stagesync_backups_create_backups_scripts: true
+stagesync_backups_script_template: "postgresbackup.sh.j2"
+stagesync_backups_cleanup_script_template: "cleanup.sh.j2"
+stagesync_backups_upload_to_bucket: "no"
+stagesync_backups_s3_bucket: s3://examplebackups/db1/daily/
+stagesync_backups_s3_weekly_bucket: s3://examplebackups/db1/weekly/
+stagesync_backups_s3_cmd: "/usr/local/bin/aws s3"
+stagesync_backups_psql: "/usr/lib/postgresql/15/bin/psql"
+stagesync_backups_pgdump: "/usr/lib/postgresql/15/bin/pg_dump"
+
+# Custom post-import updates
+stagesync_post_restore_update_db: false
+
+stagesync_sourcedb: "production"
+stagesync_destdb: "stage"
+stagesync_destdb_role: "stage"
+
+stagesync_copies: []
+# stagesync_copies:
+#   - description: production to stage media bucket
+#     source_bucket: production_bucket
+#     source_path: "files/"
+#     dest_bucket: staging_bucket
+#     dest_path: "files/"
+#     aws_profile: stage
+
+stagesync_social_client_id: "123"
+stagesync_social_secret: "456"

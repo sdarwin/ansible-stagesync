@@ -1,0 +1,3 @@
+---
+stagesync_dependency_packages:
+  - acl

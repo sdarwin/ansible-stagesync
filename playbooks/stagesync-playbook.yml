@@ -1,0 +1,48 @@
+---
+- name: Stagesync playbook destdb_step1
+  hosts: stagesync-destdb
+  remote_user: ubuntu
+  vars:
+    ansible_ssh_extra_args: '-A'
+  tasks:
+    - name: Create dest folder
+      ansible.builtin.include_role:
+        name: cppalliance.stagesync
+        tasks_from: destdb_step1.yml
+
+- name: Stagesync playbook sourcedb_step1
+  hosts: stagesync-sourcedb
+  become: true
+  remote_user: ubuntu
+  tasks:
+    - name: Backup DB
+      ansible.builtin.include_role:
+        name: cppalliance.stagesync
+        tasks_from: sourcedb_step1.yml
+
+- name: Stagesync playbook destdb_step2
+  hosts: stagesync-destdb
+  become: true
+  remote_user: ubuntu
+  vars:
+    ansible_ssh_extra_args: '-A'
+  tasks:
+    - name: Restore DB
+      ansible.builtin.include_role:
+        name: cppalliance.stagesync
+        tasks_from: destdb_step2.yml
+    - name: Update DB
+      ansible.builtin.include_role:
+        name: cppalliance.stagesync
+        tasks_from: custom/post_restore_update_db.yml
+      when: stagesync_post_restore_update_db
+
+- name: Stagesync playbook sync_files
+  hosts: localhost
+  become: true
+  remote_user: ubuntu
+  tasks:
+    - name: Sync S3 files
+      ansible.builtin.include_role:
+        name: cppalliance.stagesync
+        tasks_from: sync_files.yml

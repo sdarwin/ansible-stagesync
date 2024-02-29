@@ -1,0 +1,4 @@
+#!/bin/bash
+
+dest={{ stagesync_source_backups_dir }}
+find $dest -type f -mtime +2 -exec rm {} \;

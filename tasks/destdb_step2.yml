@@ -1,0 +1,28 @@
+---
+- name: Print backup file name
+  ansible.builtin.debug:
+    var: stagesync_backupfilename
+
+- name: Restore database
+  become: true
+  become_user: "{{ stagesync_backup_user }}"
+  ansible.builtin.shell: |
+    set -xe
+    psql -d {{ stagesync_destdb }} -c 'ALTER SCHEMA public OWNER TO {{ stagesync_destdb_role }}'
+    pg_restore --clean -d {{ stagesync_destdb }} --no-owner --role={{ stagesync_destdb_role }} "{{ stagesync_dest_tmp_dir }}/{{ stagesync_backupfilename }}"
+  args:
+    chdir: "{{ stagesync_dest_tmp_dir }}"
+    executable: /bin/bash
+  register: command_output
+  changed_when: false
+
+- name: Output of restore database
+  ansible.builtin.debug:
+    msg:
+      - "{{ command_output.stdout }}"
+      - "{{ command_output.stderr }}"
+
+- name: Cleanup backup file from dest
+  ansible.builtin.file:
+    path: "{{ stagesync_dest_tmp_dir }}/{{ stagesync_backupfilename }}"
+    state: absent

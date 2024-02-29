@@ -1,0 +1,126 @@
+#!/bin/bash
+
+set -e
+
+AUTHMETHOD="peer"		# either "md5" or "peer"
+UPLOAD_TO_BUCKET="{{ stagesync_backups_upload_to_bucket }}"
+S3CMD="{{ stagesync_backups_s3_cmd }}"
+S3BUCKET="{{ stagesync_backups_s3_bucket }}"
+S3WEEKLYBUCKET="{{ stagesync_backups_s3_weekly_bucket }}"
+#Weekly backup days
+WEEKLIES="01 07 14 21 28"
+
+# these settings are used when AUTHMETHOD is md5
+PgUSER="__"     		# USERNAME
+PgPASS="__"             	# PASSWORD
+PgHOST="localhost"       	# Hostname
+PgPORT="5432"
+
+# Linux bin paths, change this if it can not be autodetected via which command
+PSQL="{{ stagesync_backups_psql }}"
+PGDUMP="{{ stagesync_backups_pgdump }}"
+CHOWN="$(which chown)"
+CHMOD="$(which chmod)"
+GZIP="$(which gzip)"
+
+# Backup Dest directory, change this if you have some other location
+# DEST="/var/lib/postgresql/backups"
+DEST="{{ stagesync_source_backups_dir | dirname }}"
+
+# Main directory where backup will be stored
+MBD="$DEST/{{ stagesync_source_backups_dir | basename }}"
+
+# Get hostname
+HOST="$(hostname)"
+
+NOW="$(date +"%Y-%m-%d-%H-%M-%S")"
+NOWDAY="$(date +"%d")"
+# EPOCHTIME="$(date +%s)"
+# EXPIREDAILY=$(( $EPOCHTIME + 60 * 60 * 24 * 30 * 2 ))
+# EXPIREWEEKLY=$(( $EPOCHTIME + 60 * 60 * 24 * 30 * 12 ))
+
+# File to store current backup file
+# FILE=""
+# Store list of databases
+DBS=""
+
+# DO NOT BACKUP these databases
+IGGY="template0 template1"
+
+[ ! -d $MBD ] && mkdir -p $MBD || :
+
+# only the backup user can access it
+$CHMOD 0700 $DEST
+# $CHOWN 0.0 -R $DEST   # if "only root"
+
+# Get all database list first
+if [ "$AUTHMETHOD" == "md5" ]; then
+    DBS="$(PGPASSWORD=$PgPASS $PSQL -h localhost -U $PgUSER -p $PgPORT -l | grep -Eo '^ \w+\b')"
+elif [ "$AUTHMETHOD" == "peer" ]; then
+    DBS="$($PSQL -l | grep -Eo '^ \w+\b')"
+else
+    echo "Please set AUTHMETHOD."
+    exit 1
+fi
+
+#DBS=`echo $DBS | sed -e 's/information_schema //'`
+
+# If command-line arguments are passed, they will be a list of databases.
+if [ -n "$1" ]; then
+    DBS="$@"
+fi
+
+for db in $DBS
+do
+    #to trim whitespace from db:  FOO_NO_WHITESPACE="$(echo -e "${FOO}" | tr -d '[[:space:]]')"
+    db="$(echo -e "${db}" | tr -d '[[:space:]]')"
+    skipdb=-1
+    if [ "$IGGY" != "" ];
+    then
+        for i in $IGGY
+        do
+            [ "$db" == "$i" ] && skipdb=1 || :
+        done
+    fi
+
+    if [ "$skipdb" == "-1" ] ; then
+        cd $MBD
+        SQLFILE="$MBD/$db.$HOST.$NOW.sql.gz"
+        DUMPFILE="$MBD/$db.$HOST.$NOW.dump"
+        # do all inone job in pipe,
+        # connect to mysql using mysqldump for select mysql database
+        # and pipe it out to gz file in backup dir :)
+	if [ "$AUTHMETHOD" == "md5" ]; then
+            PGPASSWORD=$PgPASS $PGDUMP -h localhost -U $PgUSER -p $PgPORT "$db" | $GZIP -9 > "$SQLFILE"
+            if [ "$UPLOAD_TO_BUCKET" == "yes" ]; then
+                $S3CMD cp "$SQLFILE" "$S3BUCKET"
+            fi
+            PGPASSWORD=$PgPASS $PGDUMP -Fc -h localhost -U $PgUSER -p $PgPORT "$db" > "$DUMPFILE"
+            if [ "$UPLOAD_TO_BUCKET" == "yes" ]; then
+                $S3CMD cp "$DUMPFILE" "$S3BUCKET"
+            fi
+	elif [ "$AUTHMETHOD" == "peer" ]; then
+            $PGDUMP -c "$db" | $GZIP -9 > "$SQLFILE"
+            if [ "$UPLOAD_TO_BUCKET" == "yes" ]; then
+                $S3CMD cp "$SQLFILE" "$S3BUCKET"
+            fi
+            $PGDUMP -c -Fc "$db" > "$DUMPFILE"
+            if [ "$UPLOAD_TO_BUCKET" == "yes" ]; then
+                $S3CMD cp "$DUMPFILE" "$S3BUCKET"
+            fi
+	else
+            echo "Please set AUTHMETHOD."
+            exit 1
+        fi
+        #weeklies:
+        for DAY in $WEEKLIES
+        do
+            if [ "$NOWDAY"  == "$DAY" ] ; then
+                if [ "$UPLOAD_TO_BUCKET" == "yes" ]; then
+                    $S3CMD cp "$SQLFILE" "$S3WEEKLYBUCKET"
+                    $S3CMD cp "$DUMPFILE" "$S3WEEKLYBUCKET"
+                fi
+            fi
+        done
+    fi
+done
