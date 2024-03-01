@@ -8,7 +8,12 @@
   become_user: "{{ stagesync_backup_user }}"
   ansible.builtin.shell: |
     set -xe
-    psql -d {{ stagesync_destdb }} -c 'ALTER SCHEMA public OWNER TO {{ stagesync_destdb_role }}'
+    # One possibility to configured permissions
+    # psql -d {{ stagesync_destdb }} -c 'ALTER SCHEMA public OWNER TO {{ stagesync_destdb_role }}'
+    # Another possibility
+    # (a small detail is that this default should already be in place "COMMENT ON SCHEMA public IS 'standard public schema';")
+    psql -d {{ stagesync_destdb }} -c 'GRANT ALL ON SCHEMA public to public'
+    psql -d {{ stagesync_destdb }} -c 'GRANT ALL ON SCHEMA public to {{ stagesync_destdb_role }}'
     pg_restore --clean -d {{ stagesync_destdb }} --no-owner --role={{ stagesync_destdb_role }} "{{ stagesync_dest_tmp_dir }}/{{ stagesync_backupfilename }}"
   args:
     chdir: "{{ stagesync_dest_tmp_dir }}"
